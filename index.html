@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Můj digitální šatník pro panenky</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header>
+    <h1 id="view-title">Domů</h1>
+    <div class="header-actions">
+      <button class="btn-icon" id="theme-btn" title="Přepnout režim">🌓</button>
+      <button class="btn-icon" id="filter-btn" title="Filtry">⚙️</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1. PŘEHLED / DOMŮ -->
+    <section id="view-home" class="view-content active">
+      <div class="banner">
+        <h2>Inventář panenek</h2>
+        <div class="stats-grid">
+          <div class="stat-box"><span id="stat-total">0</span><small>Předmětů</small></div>
+          <div class="stat-box"><span id="stat-fav">0</span><small>Oblíbené</small></div>
+          <div class="stat-box"><span id="stat-damaged">0</span><small>Poškozené</small></div>
+        </div>
+      </div>
+      <h3 style="margin-bottom: 10px; font-size: 1rem;">Kategorie</h3>
+      <div class="grid" id="home-categories-grid"></div>
+
+      <h3 style="margin: 20px 0 10px; font-size: 1rem;">Nedávno přidané</h3>
+      <div class="grid" id="home-recent-grid"></div>
+    </section>
+
+    <!-- 2. KATALOG PŘEDMĚTŮ -->
+    <section id="view-catalog" class="view-content">
+      <div class="search-bar">
+        <input type="text" id="catalog-search" placeholder="Hledat podle názvu, poznámky...">
+        <button class="btn-toggle" id="view-toggle-btn">📋</button>
+      </div>
+      <div id="catalog-nav" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--accent);"></div>
+      <div id="catalog-grid" class="grid"></div>
+    </section>
+
+    <!-- 3. OUTFITY -->
+    <section id="view-outfits" class="view-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3>Uložené outfity</h3>
+        <button class="btn-primary btn" style="width:auto; padding:6px 12px; font-size:0.8rem;" id="new-outfit-btn">+ Nový outfit</button>
+      </div>
+      <div id="outfits-grid" class="grid"></div>
+    </section>
+
+    <!-- 4. PANENKY -->
+    <section id="view-dolls" class="view-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3>Katalog panenek</h3>
+        <button class="btn-primary btn" style="width:auto; padding:6px 12px; font-size:0.8rem;" id="new-doll-btn">+ Přidat panenku</button>
+      </div>
+      <div id="dolls-grid" class="grid"></div>
+    </section>
+
+    <!-- 5. SPRÁVA A ZÁLOHA -->
+    <section id="view-settings" class="view-content">
+      <div class="banner">
+        <h3>Zálohování a offline data</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Kompletní export inventáře, outfitů i fotek do jednoho souboru.</p>
+        <button class="btn btn-primary" id="export-btn" style="margin-top:12px;">Stáhnout zálohu (JSON)</button>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Obnovit ze zálohy</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Plovoucí akční tlačítko pro rychlé přidání předmětu -->
+  <button class="fab" id="fab-add">+</button>
+
+  <!-- Spodní navigace -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active" data-view="view-home"><span>🏠</span>Domů</button>
+    <button class="nav-tab" data-view="view-catalog"><span>👗</span>Katalog</button>
+    <button class="nav-tab" data-view="view-outfits"><span>✨</span>Outfity</button>
+    <button class="nav-tab" data-view="view-dolls"><span>🎎</span>Panenky</button>
+    <button class="nav-tab" data-view="view-settings"><span>⚙️</span>Data</button>
+  </nav>
+
+  <!-- MODAL: PŘIDÁNÍ / EDITACE PŘEDMĚTU -->
+  <div class="modal" id="modal-item">
+    <div class="modal-content">
+      <h3 id="modal-item-title">Přidat nový předmět</h3>
+      <form id="form-item">
+        <input type="hidden" id="item-id">
+        
+        <div class="form-group">
+          <label>Fotografie (první je hlavní)*</label>
+          <div class="photo-previews" id="item-photos-container"></div>
+          <div class="form-row">
+            <button type="button" class="btn btn-secondary" id="btn-camera" style="margin:0;">📷 Fotoaparát</button>
+            <button type="button" class="btn btn-secondary" id="btn-gallery" style="margin:0;">🖼️ Galerie</button>
+          </div>
+          <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="file-gallery" accept="image/*" multiple style="display:none">
+        </div>
+
+        <div class="form-group">
+          <label>Název předmětu*</label>
+          <input type="text" id="item-name" required placeholder="např. Červené lodičky na platformě">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>Hlavní kategorie*</label>
+            <select id="item-category" required></select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Podkategorie*</label>
+            <select id="item-subcategory" required></select>
+          </div>
+        </div>
+
+        <!-- Specifická pole pro Obuv -->
+        <div id="fields-shoes" style="display:none; background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:12px;">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Typ podpatku</label>
+              <select id="shoe-heel">
+                <option value="">- Neuvedeno -</option>
+                <option value="jehlový">Jehlový</option>
+                <option value="široký">Široký</option>
+                <option value="klínek">Klínek</option>
+                <option value="nízký/žádný">Nízký / Žádný</option>
+                <option value="extrémní">Extrémně vysoký</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Platforma</label>
+              <select id="shoe-platform">
+                <option value="ne">Bez platformy</option>
+                <option value="ano">S platformou</option>
+                <option value="vysoká">Vysoká platforma</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Zapínání</label>
+            <input type="text" id="shoe-fastening" placeholder="pásky, zip, šněrování...">
+          </div>
+        </div>
+
+        <!-- Specifická pole pro Paruky -->
+        <div id="fields-wigs" style="display:none; background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:12px;">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Délka vlasů</label>
+              <input type="text" id="wig-length" placeholder="krátké, do pasu...">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Typ účesu</label>
+              <input type="text" id="wig-style" placeholder="rovné, vlnité, culík...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Specifická pole pro Nehty -->
+        <div id="fields-nails" style="display:none; background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:12px;">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Určení</label>
+              <select id="nail-target">
+                <option value="ruce">Ruce</option>
+                <option value="nohy">Nohy</option>
+                <option value="sada">Sada obojí</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Tvar / Délka</label>
+              <input type="text" id="nail-shape" placeholder="stiletto, square, dlouhé...">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>Počet kusů</label>
+            <input type="number" id="item-quantity" min="1" value="1">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Stav</label>
+            <select id="item-condition">
+              <option value="Nový">Nový</option>
+              <option value="Jako nový">Jako nový</option>
+              <option value="Používaný">Používaný</option>
+              <option value="Opotřebovaný">Opotřebovaný</option>
+              <option value="Poškozený">Poškozený</option>
+              <option value="K opravě">K opravě</option>
+              <option value="Vyřazený">Vyřazený</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>Místo uložení</label>
+            <input type="text" id="item-location" placeholder="Krabice A, šuplík 2...">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Štítky (čárkou)</label>
+            <input type="text" id="item-tags" placeholder="glamour, léto, gothic">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Poznámka</label>
+          <textarea id="item-notes" rows="2" placeholder="Vlastní doplňující popis..."></textarea>
+        </div>
+
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="item-favorite" style="width:20px; height:20px;">
+          <label for="item-favorite" style="margin:0;">Označit jako oblíbené</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Uložit do inventáře</button>
+        <button type="button" class="btn btn-secondary" id="modal-item-cancel">Zrušit</button>
+        <button type="button" class="btn btn-danger" id="modal-item-delete" style="display:none; margin-top:8px;">Smazat předmět</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DETAIL PŘEDMĚTU -->
+  <div class="modal" id="modal-detail">
+    <div class="modal-content">
+      <div id="detail-carousel" style="width:100%; aspect-ratio:1; border-radius:8px; overflow:hidden; position:relative; background:#000;">
+        <img id="detail-main-img" src="" style="width:100%; height:100%; object-fit:contain;">
+      </div>
+      <div class="photo-previews" id="detail-thumbnails"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+        <h2 id="detail-name" style="font-size:1.2rem;"></h2>
+        <span id="detail-fav-badge" style="font-size:1.3rem;"></span>
+      </div>
+      <p id="detail-category-path" style="color:var(--accent); font-size:0.85rem; margin-top:2px;"></p>
+
+      <div id="detail-specs" style="margin:12px 0; font-size:0.85rem; line-height:1.5;"></div>
+
+      <div class="form-row" style="margin-top:16px;">
+        <button class="btn btn-primary" id="detail-edit-btn">✏️ Upravit</button>
+        <button class="btn btn-secondary" id="detail-close-btn" style="margin:0;">Zavřít</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DETAIL / TVORBA OUTFITU -->
+  <div class="modal" id="modal-outfit">
+    <div class="modal-content">
+      <h3 id="modal-outfit-title">Sestavit outfit</h3>
+      <div id="outfit-conflicts-container"></div>
+      <form id="form-outfit">
+        <input type="hidden" id="outfit-id">
+        <div class="form-group">
+          <label>Název outfitu*</label>
+          <input type="text" id="outfit-name" required placeholder="např. Plesové šaty s rukavičkami">
+        </div>
+        <div class="form-group">
+          <label>Hlavní fotografie outfitu</label>
+          <div id="outfit-photo-preview" style="width:100%; height:140px; background:var(--bg-card); border-radius:8px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid var(--border);">
+            <span style="color:var(--text-muted); font-size:0.8rem;">Žádná fotografie</span>
+          </div>
+          <input type="file" id="outfit-photo-file" accept="image/*" style="margin-top:6px;">
+        </div>
+        <div class="form-group">
+          <label>Výběr předmětů z inventáře</label>
+          <div id="outfit-items-selector" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; background:var(--bg-card);"></div>
+        </div>
+        <div class="form-group">
+          <label>Poznámka k outfitu</label>
+          <textarea id="outfit-notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Uložit outfit</button>
+        <button type="button" class="btn btn-secondary" id="modal-outfit-cancel">Zrušit</button>
+        <button type="button" class="btn btn-danger" id="modal-outfit-delete" style="display:none; margin-top:8px;">Smazat outfit</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
