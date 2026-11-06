@@ -66,11 +66,31 @@
     <!-- 5. SPRÁVA A ZÁLOHA -->
     <section id="view-settings" class="view-content">
       <div class="banner">
-        <h3>Zálohování a offline data</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Kompletní export inventáře, outfitů i fotek do jednoho souboru.</p>
-        <button class="btn btn-primary" id="export-btn" style="margin-top:12px;">Stáhnout zálohu (JSON)</button>
+        <h3>Automatické zrcadlení do cloudu (GitHub Gist)</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">
+          Po uložení tokenu se každá změna v inventáři okamžitě na pozadí nahraje do tvého soukromého Gistu.
+        </p>
+        <div class="form-group" style="margin-top:10px;">
+          <label>GitHub Personal Access Token (classic s právem "gist")</label>
+          <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label>Gist ID (nevyplňuj, vytvoří se samo)</label>
+          <input type="text" id="gist-id" placeholder="Vygeneruje se automaticky" readonly>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" id="save-token-btn" style="flex:1;">Uložit nastavení</button>
+          <button class="btn btn-secondary" id="sync-now-btn" style="flex:1; margin:0;">Zrcadlit hned</button>
+        </div>
+        <div id="sync-status" style="font-size:0.75rem; color:var(--accent); margin-top:8px;"></div>
+      </div>
+
+      <div class="banner" style="margin-top:16px;">
+        <h3>Ruční záloha do souboru</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Stáhnout nebo nahrát kompletní soubor .json.</p>
+        <button class="btn btn-secondary" id="export-btn" style="margin-top:8px;">Stáhnout zálohu (JSON)</button>
         <input type="file" id="import-file" accept=".json" style="display:none">
-        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Obnovit ze zálohy</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="margin-top:6px;">Obnovit ze souboru</button>
       </div>
     </section>
   </main>
