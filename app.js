@@ -142,6 +142,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupNavigation();
   setupFormBindings();
   setupTheme();
+  setupGistUI();
   populateCategorySelects();
   await refreshAll();
 
@@ -388,6 +389,7 @@ async function refreshAll() {
   renderHomeCategories(items);
   renderRecentItems(items);
   if (currentView === "view-catalog") renderCatalog();
+  GistSync.syncToCloud();
 }
 
 function updateHomeStats(items) {
@@ -756,4 +758,99 @@ function importDatabaseFile(e) {
     }
   };
   reader.readAsText(file);
+}
+
+/**
+ * Automatická synchronizace a zrcadlení do GitHub Gist
+ */
+const GistSync = {
+  getToken: () => localStorage.getItem("satnik_gist_token") || "",
+  setToken: (tok) => localStorage.setItem("satnik_gist_token", tok),
+  getGistId: () => localStorage.getItem("satnik_gist_id") || "",
+  setGistId: (id) => localStorage.setItem("satnik_gist_id", id),
+
+  async syncToCloud() {
+    const token = this.getToken();
+    if (!token) return;
+
+    const statusEl = document.getElementById("sync-status");
+    if (statusEl) statusEl.textContent = "⏳ Zrcadlím data do cloudu...";
+
+    try {
+      const items = await DBService.getAll("items");
+      const outfits = await DBService.getAll("outfits");
+      const dolls = await DBService.getAll("dolls");
+
+      const payload = {
+        version: 1,
+        lastUpdated: new Date().toISOString(),
+        items,
+        outfits,
+        dolls
+      };
+
+      const gistId = this.getGistId();
+      const headers = {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json"
+      };
+
+      const body = {
+        description: "Můj digitální šatník pro panenky - Automatická záloha",
+        public: false,
+        files: {
+          "satnik_panenek_backup.json": {
+            content: JSON.stringify(payload)
+          }
+        }
+      };
+
+      let res;
+      if (gistId) {
+        res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(body)
+        });
+      } else {
+        res = await fetch("https://api.github.com/gists", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body)
+        });
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        this.setGistId(data.id);
+        const inputId = document.getElementById("gist-id");
+        if (inputId) inputId.value = data.id;
+        if (statusEl) statusEl.textContent = `✅ Zazrcadleno do cloudu (${new Date().toLocaleTimeString()})`;
+      } else {
+        if (statusEl) statusEl.textContent = `⚠️ Chyba zrcadlení: ${res.statusText}`;
+      }
+    } catch (err) {
+      if (statusEl) statusEl.textContent = `⚠️ Chyba spojení: ${err.message}`;
+    }
+  }
+};
+
+function setupGistUI() {
+  const tokInput = document.getElementById("gist-token");
+  const idInput = document.getElementById("gist-id");
+  if (tokInput) tokInput.value = GistSync.getToken();
+  if (idInput) idInput.value = GistSync.getGistId();
+
+  const saveBtn = document.getElementById("save-token-btn");
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      GistSync.setToken(tokInput.value.trim());
+      alert("Token byl uložen. Nyní proběhne první synchronizace.");
+      GistSync.syncToCloud();
+    };
+  }
+
+  const syncBtn = document.getElementById("sync-now-btn");
+  if (syncBtn) syncBtn.onclick = () => GistSync.syncToCloud();
 }
